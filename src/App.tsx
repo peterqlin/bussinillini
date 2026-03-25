@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import MapView from './components/MapView'
 import RouteSidebar from './components/RouteSidebar'
-import { mockVehicles } from './mocks/vehicles'
-import { mockRoutes } from './mocks/routes'
+import { useMtdVehicles } from './hooks/useMtdVehicles'
+import { useMtdRoutes } from './hooks/useMtdRoutes'
 
 const queryClient = new QueryClient()
 
-const ALL_ROUTE_IDS = new Set(mockRoutes.map((r) => r.route_id))
+function BusTracker() {
+  const { data: vehiclesData } = useMtdVehicles()
+  const { data: routesData } = useMtdRoutes()
 
-export default function App() {
-  const [visibleRouteIds, setVisibleRouteIds] = useState<Set<string>>(ALL_ROUTE_IDS)
+  const vehicles = vehiclesData?.vehicles ?? []
+  const routes = routesData?.routes ?? []
+
+  const [visibleRouteIds, setVisibleRouteIds] = useState<Set<string>>(new Set())
+
+  // Once routes load, show all of them by default
+  useEffect(() => {
+    if (routes.length > 0) {
+      setVisibleRouteIds(new Set(routes.map((r) => r.route_id)))
+    }
+  }, [routes.length])
 
   function handleToggle(routeId: string) {
     setVisibleRouteIds((prev) => {
@@ -25,7 +36,7 @@ export default function App() {
   }
 
   function handleSelectAll() {
-    setVisibleRouteIds(new Set(mockRoutes.map((r) => r.route_id)))
+    setVisibleRouteIds(new Set(routes.map((r) => r.route_id)))
   }
 
   function handleClearAll() {
@@ -33,21 +44,27 @@ export default function App() {
   }
 
   return (
+    <div className="flex h-screen overflow-hidden bg-gray-900">
+      <RouteSidebar
+        routes={routes}
+        visibleRouteIds={visibleRouteIds}
+        onToggle={handleToggle}
+        onSelectAll={handleSelectAll}
+        onClearAll={handleClearAll}
+      />
+      <MapView
+        vehicles={vehicles}
+        routes={routes}
+        visibleRouteIds={visibleRouteIds}
+      />
+    </div>
+  )
+}
+
+export default function App() {
+  return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex h-screen overflow-hidden bg-gray-900">
-        <RouteSidebar
-          routes={mockRoutes}
-          visibleRouteIds={visibleRouteIds}
-          onToggle={handleToggle}
-          onSelectAll={handleSelectAll}
-          onClearAll={handleClearAll}
-        />
-        <MapView
-          vehicles={mockVehicles}
-          routes={mockRoutes}
-          visibleRouteIds={visibleRouteIds}
-        />
-      </div>
+      <BusTracker />
     </QueryClientProvider>
   )
 }
