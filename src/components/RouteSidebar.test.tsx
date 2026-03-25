@@ -29,35 +29,46 @@ describe('RouteSidebar', () => {
     }
   })
 
-  it('calls onToggle with the correct route_id when a route is clicked', async () => {
+  it('calls onToggle with the correct route_id when a route switch is clicked', async () => {
     const onToggle = vi.fn()
     renderSidebar(new Set(mockRoutes.map((r) => r.route_id)), onToggle)
 
-    const label = screen.getAllByLabelText(/Toggle BROWN route/i)[0]
-    await userEvent.click(label)
+    const switches = screen.getAllByRole('switch', { name: /Toggle BROWN route/i })
+    await userEvent.click(switches[0])
 
     expect(onToggle).toHaveBeenCalledWith('BROWN')
   })
 
-  it('calls onSelectAll when Select All is clicked', async () => {
+  it('calls onSelectAll when toggle is clicked while all buses are hidden', async () => {
     const onSelectAll = vi.fn()
     renderSidebar(new Set(), vi.fn(), onSelectAll)
 
-    // There are two "Select All" buttons (desktop + mobile drawer both render sidebarContent)
-    const buttons = screen.getAllByRole('button', { name: /select all/i })
-    await userEvent.click(buttons[0])
+    const switches = screen.getAllByRole('switch', { name: /toggle all buses/i })
+    await userEvent.click(switches[0])
 
     expect(onSelectAll).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onClearAll when Clear All is clicked', async () => {
+  it('calls onClearAll when toggle is clicked while all buses are visible', async () => {
     const onClearAll = vi.fn()
     renderSidebar(new Set(mockRoutes.map((r) => r.route_id)), vi.fn(), vi.fn(), onClearAll)
 
-    const buttons = screen.getAllByRole('button', { name: /clear all/i })
-    await userEvent.click(buttons[0])
+    const switches = screen.getAllByRole('switch', { name: /toggle all buses/i })
+    await userEvent.click(switches[0])
 
     expect(onClearAll).toHaveBeenCalledTimes(1)
+  })
+
+  it('toggle switch is checked when all routes are visible', () => {
+    renderSidebar(new Set(mockRoutes.map((r) => r.route_id)))
+    const switches = screen.getAllByRole('switch', { name: /toggle all buses/i })
+    expect(switches[0]).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('toggle switch is unchecked when no routes are visible', () => {
+    renderSidebar(new Set())
+    const switches = screen.getAllByRole('switch', { name: /toggle all buses/i })
+    expect(switches[0]).toHaveAttribute('aria-checked', 'false')
   })
 
   it('applies the correct background color on route swatches', () => {
@@ -70,10 +81,10 @@ describe('RouteSidebar', () => {
     expect(greenSwatches[0]).toHaveStyle({ backgroundColor: '#00a638' })
   })
 
-  it('shows unchecked routes in muted color when route is hidden', () => {
+  it('shows route names in muted color when route is hidden', () => {
     renderSidebar(new Set()) // all hidden
-    // The label text for each route should use the dimmed class
-    const brownLabel = screen.getAllByLabelText(/Toggle BROWN route/i)[0].closest('label')
-    expect(brownLabel?.querySelector('span.text-gray-500')).toBeTruthy()
+    const brownSwitch = screen.getAllByRole('switch', { name: /Toggle BROWN route/i })[0]
+    const row = brownSwitch.closest('div')
+    expect(row?.querySelector('span.text-gray-500')).toBeTruthy()
   })
 })

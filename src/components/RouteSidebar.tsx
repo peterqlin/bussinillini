@@ -17,6 +17,7 @@ export default function RouteSidebar({
   onClearAll,
 }: RouteSidebarProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const allVisible = routes.length > 0 && routes.every((r) => visibleRouteIds.has(r.route_id))
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-gray-900 text-white">
@@ -26,19 +27,24 @@ export default function RouteSidebar({
         <p className="text-xs text-gray-400 mt-0.5">Champaign-Urbana, IL</p>
       </div>
 
-      {/* Controls */}
-      <div className="flex gap-2 px-4 py-2 border-b border-gray-700">
+      {/* Master toggle */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+        <span className="text-sm font-medium">Show all buses</span>
         <button
-          onClick={onSelectAll}
-          className="flex-1 text-xs py-1 px-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+          role="switch"
+          aria-checked={allVisible}
+          aria-label="Toggle all buses"
+          onClick={allVisible ? onClearAll : onSelectAll}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 ${
+            allVisible ? 'bg-blue-500' : 'bg-gray-600'
+          }`}
         >
-          Select All
-        </button>
-        <button
-          onClick={onClearAll}
-          className="flex-1 text-xs py-1 px-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
-        >
-          Clear All
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg transform transition-transform duration-200 ${
+              allVisible ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
         </button>
       </div>
 
@@ -48,31 +54,37 @@ export default function RouteSidebar({
           const isVisible = visibleRouteIds.has(route.route_id)
           return (
             <li key={route.route_id}>
-              <label className="flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-800 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={isVisible}
-                  onChange={() => onToggle(route.route_id)}
-                  className="sr-only"
-                  aria-label={`Toggle ${route.route_long_name} route`}
-                />
+              <div className="flex items-center gap-3 px-4 py-2">
                 {/* Color swatch */}
                 <span
-                  className="w-4 h-4 rounded-full shrink-0 border border-white/20"
+                  className="w-3.5 h-3.5 rounded-full shrink-0 border border-white/20"
                   style={{ backgroundColor: `#${route.route_color}` }}
                   aria-hidden="true"
                   data-testid={`swatch-${route.route_id}`}
                 />
                 {/* Route names */}
-                <span className={`text-sm leading-tight ${isVisible ? 'text-white' : 'text-gray-500'}`}>
+                <span className={`text-sm leading-tight flex-1 ${isVisible ? 'text-white' : 'text-gray-500'}`}>
                   <span className="font-mono text-xs text-gray-400 mr-1.5">{route.route_short_name}</span>
                   {route.route_long_name}
                 </span>
-                {/* Checkmark */}
-                <span className="ml-auto text-xs" aria-hidden="true">
-                  {isVisible ? '✓' : ''}
-                </span>
-              </label>
+                {/* Per-route toggle switch */}
+                <button
+                  role="switch"
+                  aria-checked={isVisible}
+                  aria-label={`Toggle ${route.route_long_name} route`}
+                  onClick={() => onToggle(route.route_id)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75 ${
+                    isVisible ? 'bg-blue-500' : 'bg-gray-600'
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${
+                      isVisible ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </li>
           )
         })}
