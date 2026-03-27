@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import MapView from './components/MapView'
 import RouteSidebar from './components/RouteSidebar'
@@ -14,14 +14,29 @@ function BusTracker() {
   const vehicles = vehiclesData?.vehicles ?? []
   const routes = routesData?.routes ?? []
 
+  const activeRouteIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const v of vehicles) {
+      if (v.trip?.route_id) ids.add(v.trip.route_id)
+    }
+    return ids
+  }, [vehicles])
+
+  const activeRoutes = useMemo(
+    () => routes.filter((r) => activeRouteIds.has(r.route_id)),
+    [routes, activeRouteIds],
+  )
+
   const [visibleRouteIds, setVisibleRouteIds] = useState<Set<string>>(new Set())
 
-  // Once routes load, show all of them by default
+  // Initialize once when active routes first become available
+  const initializedRef = useRef(false)
   useEffect(() => {
-    if (routes.length > 0) {
-      setVisibleRouteIds(new Set(routes.map((r) => r.route_id)))
+    if (!initializedRef.current && activeRoutes.length > 0) {
+      initializedRef.current = true
+      setVisibleRouteIds(new Set(activeRoutes.map((r) => r.route_id)))
     }
-  }, [routes.length])
+  }, [activeRoutes])
 
   function handleToggle(routeId: string) {
     setVisibleRouteIds((prev) => {
@@ -36,7 +51,7 @@ function BusTracker() {
   }
 
   function handleSelectAll() {
-    setVisibleRouteIds(new Set(routes.map((r) => r.route_id)))
+    setVisibleRouteIds(new Set(activeRoutes.map((r) => r.route_id)))
   }
 
   function handleClearAll() {
@@ -46,7 +61,7 @@ function BusTracker() {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-900">
       <RouteSidebar
-        routes={routes}
+        routes={activeRoutes}
         visibleRouteIds={visibleRouteIds}
         onToggle={handleToggle}
         onSelectAll={handleSelectAll}
