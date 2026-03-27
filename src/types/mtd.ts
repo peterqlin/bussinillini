@@ -51,6 +51,21 @@ export interface VehiclesResponse {
   vehicles: Vehicle[]
 }
 
+export interface ShapePoint {
+  shape_id: string
+  shape_pt_lat: number
+  shape_pt_lon: number
+  shape_pt_sequence: number
+  shape_dist_traveled: number
+}
+
+export interface ShapeResponse {
+  time: string
+  status: MtdStatus
+  rqst: MtdRequest
+  shapes: ShapePoint[]
+}
+
 export interface RoutesResponse {
   time: string
   new_changeset: boolean
