@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import type { Vehicle, Route, Stop } from '../types/mtd'
+import type { Vehicle, Route, StopPoint } from '../types/mtd'
 import type { RouteShape } from '../hooks/useMtdShapes'
 
 interface MapViewProps {
   vehicles: Vehicle[]
   routes: Route[]
   shapes: RouteShape[]
-  stops: Stop[]
+  stops: StopPoint[]
   visibleRouteIds: Set<string>
 }
 

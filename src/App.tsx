@@ -17,7 +17,10 @@ function BusTracker() {
   const routes = routesData?.routes ?? []
   const shapes = useMtdShapes(vehicles)
   const { data: stopsData } = useMtdStops()
-  const stops = stopsData?.stops ?? []
+  const stops = useMemo(
+    () => (stopsData?.stops ?? []).flatMap((s) => s.stop_points),
+    [stopsData],
+  )
 
   const activeRouteIds = useMemo(() => {
     const ids = new Set<string>()

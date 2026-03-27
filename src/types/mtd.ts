@@ -66,13 +66,19 @@ export interface ShapeResponse {
   shapes: ShapePoint[]
 }
 
-export interface Stop {
+export interface StopPoint {
   stop_id: string
   stop_name: string
   stop_lat: number
   stop_lon: number
   stop_code: string
   wheelchair_boarding: number
+}
+
+export interface Stop {
+  stop_id: string
+  stop_name: string
+  stop_points: StopPoint[]
 }
 
 export interface StopsResponse {
