@@ -199,7 +199,7 @@ export default function MapView({ vehicles, routes, shapes, stops, visibleRouteI
           id: 'stops',
           type: 'circle',
           source: 'stops',
-          minzoom: 14,
+          minzoom: 13,
           paint: {
             'circle-radius': 4,
             'circle-color': '#ffffff',
