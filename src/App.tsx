@@ -4,6 +4,7 @@ import MapView from './components/MapView'
 import RouteSidebar from './components/RouteSidebar'
 import { useMtdVehicles } from './hooks/useMtdVehicles'
 import { useMtdRoutes } from './hooks/useMtdRoutes'
+import { useMtdShapes } from './hooks/useMtdShapes'
 
 const queryClient = new QueryClient()
 
@@ -13,6 +14,7 @@ function BusTracker() {
 
   const vehicles = vehiclesData?.vehicles ?? []
   const routes = routesData?.routes ?? []
+  const shapes = useMtdShapes(vehicles)
 
   const activeRouteIds = useMemo(() => {
     const ids = new Set<string>()
@@ -70,6 +72,7 @@ function BusTracker() {
       <MapView
         vehicles={vehicles}
         routes={routes}
+        shapes={shapes}
         visibleRouteIds={visibleRouteIds}
       />
     </div>

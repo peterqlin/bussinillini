@@ -2,10 +2,12 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { Vehicle, Route } from '../types/mtd'
+import type { RouteShape } from '../hooks/useMtdShapes'
 
 interface MapViewProps {
   vehicles: Vehicle[]
   routes: Route[]
+  shapes: RouteShape[]
   visibleRouteIds: Set<string>
 }
 
@@ -18,10 +20,11 @@ function getRouteColor(routeId: string, routes: Route[]): string {
   return route ? `#${route.route_color}` : '#888888'
 }
 
-export default function MapView({ vehicles, routes, visibleRouteIds }: MapViewProps) {
+export default function MapView({ vehicles, routes, shapes, visibleRouteIds }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
+  const routeLayersRef = useRef<string[]>([])
 
   // Initialize map once
   useEffect(() => {
@@ -91,6 +94,71 @@ export default function MapView({ vehicles, routes, visibleRouteIds }: MapViewPr
       markersRef.current.push(marker)
     })
   }, [vehicles, routes, visibleRouteIds])
+
+  // Draw route polylines whenever shape data changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    const drawLayers = () => {
+      // Remove previous route layers/sources
+      for (const id of routeLayersRef.current) {
+        if (map.getLayer(id)) map.removeLayer(id)
+        if (map.getSource(id)) map.removeSource(id)
+      }
+      routeLayersRef.current = []
+
+      if (shapes.length === 0) return
+
+      // Insert lines below the first symbol layer so labels stay on top
+      const firstSymbol = map.getStyle().layers?.find((l) => l.type === 'symbol')?.id
+
+      for (const { shapeId, routeId, coords } of shapes) {
+        const color = getRouteColor(routeId, routes)
+        const layerId = `route-${shapeId}`
+
+        map.addSource(layerId, {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} },
+        })
+        map.addLayer(
+          {
+            id: layerId,
+            type: 'line',
+            source: layerId,
+            layout: {
+              visibility: visibleRouteIds.has(routeId) ? 'visible' : 'none',
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: { 'line-color': color, 'line-width': 3, 'line-opacity': 0.75 },
+          },
+          firstSymbol,
+        )
+        routeLayersRef.current.push(layerId)
+      }
+    }
+
+    if (map.isStyleLoaded()) {
+      drawLayers()
+    } else {
+      map.once('load', drawLayers)
+      return () => { map.off('load', drawLayers) }
+    }
+  }, [shapes, routes]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Toggle route line visibility when visibleRouteIds changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !map.isStyleLoaded()) return
+
+    for (const { shapeId, routeId } of shapes) {
+      const layerId = `route-${shapeId}`
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, 'visibility', visibleRouteIds.has(routeId) ? 'visible' : 'none')
+      }
+    }
+  }, [visibleRouteIds, shapes])
 
   return <div ref={containerRef} className="flex-1 h-full" />
 }
