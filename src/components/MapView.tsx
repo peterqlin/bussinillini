@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import type { Vehicle, Route } from '../types/mtd'
+import type { Vehicle, Route, Stop } from '../types/mtd'
 import type { RouteShape } from '../hooks/useMtdShapes'
 
 interface MapViewProps {
   vehicles: Vehicle[]
   routes: Route[]
   shapes: RouteShape[]
+  stops: Stop[]
   visibleRouteIds: Set<string>
 }
 
@@ -20,11 +21,12 @@ function getRouteColor(routeId: string, routes: Route[]): string {
   return route ? `#${route.route_color}` : '#888888'
 }
 
-export default function MapView({ vehicles, routes, shapes, visibleRouteIds }: MapViewProps) {
+export default function MapView({ vehicles, routes, shapes, stops, visibleRouteIds }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const routeLayersRef = useRef<string[]>([])
+  const stopsAddedRef = useRef(false)
 
   // Initialize map once
   useEffect(() => {
@@ -168,6 +170,72 @@ export default function MapView({ vehicles, routes, shapes, visibleRouteIds }: M
       }
     }
   }, [visibleRouteIds, shapes])
+
+  // Add stop markers once when stop data first arrives (stops are static GTFS data)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || stops.length === 0 || stopsAddedRef.current) return
+
+    const addStops = () => {
+      if (stopsAddedRef.current) return
+      stopsAddedRef.current = true
+
+      map.addSource('stops', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: stops.map((stop) => ({
+            type: 'Feature' as const,
+            geometry: { type: 'Point' as const, coordinates: [stop.stop_lon, stop.stop_lat] },
+            properties: { stop_name: stop.stop_name, stop_id: stop.stop_id },
+          })),
+        },
+      })
+
+      // Small white circles visible when zoomed in; sit below map labels
+      const firstSymbol = map.getStyle().layers?.find((l) => l.type === 'symbol')?.id
+      map.addLayer(
+        {
+          id: 'stops',
+          type: 'circle',
+          source: 'stops',
+          minzoom: 14,
+          paint: {
+            'circle-radius': 4,
+            'circle-color': '#ffffff',
+            'circle-stroke-width': 1.5,
+            'circle-stroke-color': '#888888',
+            'circle-opacity': 0.9,
+          },
+        },
+        firstSymbol,
+      )
+
+      map.on('click', 'stops', (e) => {
+        const feature = e.features?.[0]
+        if (!feature) return
+        const [lon, lat] = (feature.geometry as { coordinates: number[] }).coordinates
+        new mapboxgl.Popup({ closeButton: false, offset: 8 })
+          .setLngLat([lon, lat])
+          .setHTML(
+            `<div style="font-family:system-ui;font-size:13px;line-height:1.4;">
+              <strong>${feature.properties?.stop_name}</strong>
+            </div>`
+          )
+          .addTo(map)
+      })
+
+      map.on('mouseenter', 'stops', () => { map.getCanvas().style.cursor = 'pointer' })
+      map.on('mouseleave', 'stops', () => { map.getCanvas().style.cursor = '' })
+    }
+
+    if (map.isStyleLoaded()) {
+      addStops()
+    } else {
+      map.once('load', addStops)
+      return () => { map.off('load', addStops) }
+    }
+  }, [stops])
 
   return <div ref={containerRef} className="flex-1 h-full" />
 }
