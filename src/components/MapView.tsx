@@ -95,18 +95,24 @@ export default function MapView({ vehicles, routes, shapes, visibleRouteIds }: M
     })
   }, [vehicles, routes, visibleRouteIds])
 
-  // Draw route polylines whenever shape data changes
+  // Draw route polylines — diffs layers so existing routes are never removed and
+  // re-added on vehicle polls, which would cause a visible flash.
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
 
-    const drawLayers = () => {
-      // Remove previous route layers/sources
-      for (const id of routeLayersRef.current) {
-        if (map.getLayer(id)) map.removeLayer(id)
-        if (map.getSource(id)) map.removeSource(id)
-      }
-      routeLayersRef.current = []
+    const syncLayers = () => {
+      const incomingIds = new Set(shapes.map((s) => `route-${s.shapeId}`))
+
+      // Remove layers that are no longer in the shape set
+      routeLayersRef.current = routeLayersRef.current.filter((id) => {
+        if (!incomingIds.has(id)) {
+          if (map.getLayer(id)) map.removeLayer(id)
+          if (map.getSource(id)) map.removeSource(id)
+          return false
+        }
+        return true
+      })
 
       if (shapes.length === 0) return
 
@@ -116,6 +122,9 @@ export default function MapView({ vehicles, routes, shapes, visibleRouteIds }: M
       for (const { shapeId, routeId, coords } of shapes) {
         const color = getRouteColor(routeId, routes)
         const layerId = `route-${shapeId}`
+
+        // Skip if already on the map — visibility effect keeps it in sync
+        if (map.getSource(layerId)) continue
 
         map.addSource(layerId, {
           type: 'geojson',
@@ -140,10 +149,10 @@ export default function MapView({ vehicles, routes, shapes, visibleRouteIds }: M
     }
 
     if (map.isStyleLoaded()) {
-      drawLayers()
+      syncLayers()
     } else {
-      map.once('load', drawLayers)
-      return () => { map.off('load', drawLayers) }
+      map.once('load', syncLayers)
+      return () => { map.off('load', syncLayers) }
     }
   }, [shapes, routes]) // eslint-disable-line react-hooks/exhaustive-deps
 
