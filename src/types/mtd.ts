@@ -66,6 +66,22 @@ export interface ShapeResponse {
   shapes: ShapePoint[]
 }
 
+export interface Stop {
+  stop_id: string
+  stop_name: string
+  stop_lat: number
+  stop_lon: number
+  stop_code: string
+  wheelchair_boarding: number
+}
+
+export interface StopsResponse {
+  time: string
+  status: MtdStatus
+  rqst: MtdRequest
+  stops: Stop[]
+}
+
 export interface RoutesResponse {
   time: string
   new_changeset: boolean
